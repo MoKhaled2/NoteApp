@@ -14,7 +14,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -35,15 +35,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authRepositoryProvider).signInWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
       // Navigation is handled by auth state listener in router or main app logic
       // But for simple flow we might want to just pop or go home if listener doesn't catch it immediately
       if (mounted) {
-         context.go('/'); // Navigate to home on success
+        context.go('/'); // Navigate to home on success
       }
     } catch (e) {
+      debugPrint('LOGIN ERROR: $e'); // Debugging
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
@@ -80,12 +81,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
+                      color: Colors.red, // Force Red Background
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: const TextStyle(
+                          color: Colors.white), // Force White Text
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -98,8 +100,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your email';
-                    if (!value.contains('@')) return 'Please enter a valid email';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your email';
+                    if (!value.contains('@'))
+                      return 'Please enter a valid email';
                     return null;
                   },
                 ),
@@ -112,8 +116,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your password';
-                    if (value.length < 6) return 'Password must be at least 6 characters';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your password';
+                    if (value.length < 6)
+                      return 'Password must be at least 6 characters';
                     return null;
                   },
                 ),

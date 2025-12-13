@@ -1,17 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/note_model.dart';
-import '../../auth/domain/app_user.dart';
 import '../../auth/data/auth_repository.dart';
-import 'mock_notes_repository.dart';
+// import 'mock_notes_repository.dart';
 
 final notesRepositoryProvider = Provider<NotesRepository>((ref) {
-  // SWITCH HERE: Use MockNotesRepository
-  return MockNotesRepository(ref.watch(authRepositoryProvider));
-  // return FirestoreNotesRepository(FirebaseFirestore.instance, ref);
+  // SWITCH HERE: Use Real Firestore Repository
+  // return MockNotesRepository(ref.watch(authRepositoryProvider));
+  return FirestoreNotesRepository(FirebaseFirestore.instance, ref);
 });
 
 final notesStreamProvider = StreamProvider<List<Note>>((ref) {
+  final authState =
+      ref.watch(authStateProvider); // Force rebuild on auth change
   return ref.watch(notesRepositoryProvider).getNotesStream();
 });
 

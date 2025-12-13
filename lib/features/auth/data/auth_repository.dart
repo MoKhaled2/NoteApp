@@ -1,13 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/app_user.dart';
-import 'mock_auth_repository.dart';
+// import 'mock_auth_repository.dart';
 
 // Provider for the AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  // SWITCH HERE: Use MockAuthRepository for now
-  return MockAuthRepository();
-  // return FirebaseAuthRepository(firebase_auth.FirebaseAuth.instance);
+  // SWITCH HERE: Use Real Firebase Repository
+  // return MockAuthRepository();
+  return FirebaseAuthRepository(firebase_auth.FirebaseAuth.instance);
 });
 
 // Stream provider for auth state changes

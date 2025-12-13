@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../domain/note_model.dart';
 import '../data/notes_repository.dart';
 import '../../auth/data/auth_repository.dart';
+import 'widgets/note_color_picker.dart'; // Import here
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -25,21 +27,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late TextEditingController _contentController;
   late DateTime? _dueDate;
   late List<String> _tags;
-  late List<String> _imageUrls; // In a real app, these would be uploaded URLs. For now we might store local paths if testing locally, but Firestore needs remote URLs. 
+  late List<String>
+      _imageUrls; // In a real app, these would be uploaded URLs. For now we might store local paths if testing locally, but Firestore needs remote URLs.
   // We will assume for this MVP we just store the path string, but practically we'd need Firebase Storage upload.
   // I will implement the UI for picking, but maybe comment out the actual upload to Keep it simple for now, or just store the path.
-  
+
   bool _isNew = true;
+  int _selectedColor = 0xFFFFFFFF; // Default white
 
   @override
   void initState() {
     super.initState();
     _isNew = widget.noteId == 'new';
     _titleController = TextEditingController(text: widget.note?.title ?? '');
-    _contentController = TextEditingController(text: widget.note?.content ?? '');
+    _contentController =
+        TextEditingController(text: widget.note?.content ?? '');
     _dueDate = widget.note?.dueDate;
     _tags = List.from(widget.note?.tags ?? []);
     _imageUrls = List.from(widget.note?.imageUrls ?? []);
+    _selectedColor = widget.note?.color ?? 0xFFFFFFFF;
   }
 
   @override
@@ -65,6 +71,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       creatorId: user.uid,
       assignedToId: widget.note?.assignedToId,
       imageUrls: _imageUrls,
+      color: _selectedColor,
     );
 
     try {
@@ -76,11 +83,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving note: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error saving note: $e')));
       }
     }
   }
-  
+
   Future<void> _deleteNote() async {
     if (_isNew) {
       context.pop();
@@ -97,7 +105,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       // TODO: Upload to Firebase Storage here and get URL.
       // For now, we'll just add the local path as a placeholder for the UI.
       setState(() {
-        _imageUrls.add(image.path); 
+        _imageUrls.add(image.path);
       });
     }
   }
@@ -128,14 +136,47 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     }
   }
 
+  void _showColorPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: 100,
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Center(
+          child: NoteColorPicker(
+            selectedColor: _selectedColor,
+            onColorChanged: (color) {
+              setState(() => _selectedColor = color);
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(_selectedColor), // Apply background color
       appBar: AppBar(
+        backgroundColor: Colors.transparent, // Transparent app bar
+        elevation: 0,
+        iconTheme:
+            const IconThemeData(color: Colors.black87), // Ensure icons visible
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: _shareNote,
+          ),
+          IconButton(
+            icon: const Icon(Icons.palette_outlined), // Color picker button
+            onPressed: _showColorPicker,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outlined),
@@ -146,8 +187,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   title: const Text('Delete Note?'),
                   content: const Text('This cannot be undone.'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Delete')),
                   ],
                 ),
               );
@@ -161,34 +206,37 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         ],
       ),
       bottomNavigationBar: BottomAppBar(
+        color: Colors.transparent,
+        elevation: 0,
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.image_outlined),
+              icon: const Icon(Icons.image_outlined, color: Colors.black87),
               onPressed: () => _pickImage(ImageSource.gallery),
               tooltip: 'Add Image',
             ),
-             IconButton(
-              icon: const Icon(Icons.camera_alt_outlined),
+            IconButton(
+              icon:
+                  const Icon(Icons.camera_alt_outlined, color: Colors.black87),
               onPressed: () => _pickImage(ImageSource.camera),
               tooltip: 'Take Photo',
             ),
             IconButton(
-              icon: const Icon(Icons.event_outlined),
+              icon: const Icon(Icons.event_outlined, color: Colors.black87),
               onPressed: _pickDate,
               tooltip: 'Set Date',
             ),
-            // Tag icon could go here
             if (_dueDate != null)
               Chip(
                 label: Text(DateFormat('MM/dd/yyyy').format(_dueDate!)),
                 onDeleted: () => setState(() => _dueDate = null),
+                backgroundColor: Colors.black12,
               ),
           ],
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -205,32 +253,43 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       child: Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file( // Using Image.file since we stored local path
-                              File(path), 
-                              height: 200, 
-                              width: 200, 
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                // Fallback if it was a remote URL in real app
-                                return Container(
-                                  height: 200,
-                                  width: 200,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.broken_image),
-                                );
-                              },
-                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            child: kIsWeb
+                                ? Image.network(
+                                    path,
+                                    height: 200,
+                                    width: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error,
+                                            stackTrace) =>
+                                        const Center(child: Icon(Icons.error)),
+                                  )
+                                : Image.file(
+                                    File(path),
+                                    height: 200,
+                                    width: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 200,
+                                        width: 200,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.broken_image),
+                                      );
+                                    },
+                                  ),
                           ),
                           Positioned(
                             right: 4,
                             top: 4,
                             child: InkWell(
-                              onTap: () => setState(() => _imageUrls.removeAt(index)),
+                              onTap: () =>
+                                  setState(() => _imageUrls.removeAt(index)),
                               child: const CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.black54,
-                                child: Icon(Icons.close, size: 16, color: Colors.white),
+                                child: Icon(Icons.close,
+                                    size: 16, color: Colors.white),
                               ),
                             ),
                           ),
@@ -240,11 +299,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   },
                 ),
               ),
+            const SizedBox(height: 16),
             TextField(
               controller: _titleController,
-              style: Theme.of(context).textTheme.headlineMedium,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87, // Force dark text
+                  ),
               decoration: const InputDecoration(
                 hintText: 'Title',
+                hintStyle: TextStyle(color: Colors.black38),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -252,12 +316,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
-             TextField(
+            TextField(
               controller: _contentController,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.black87,
+                    height: 1.6,
+                  ),
               maxLines: null,
               decoration: const InputDecoration(
                 hintText: 'Start typing...',
+                hintStyle: TextStyle(color: Colors.black38),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,

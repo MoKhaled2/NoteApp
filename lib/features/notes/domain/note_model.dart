@@ -12,6 +12,7 @@ class Note {
   final String creatorId;
   final String? assignedToId;
   final List<String> imageUrls;
+  final int color; // ARGB integer
 
   const Note({
     required this.id,
@@ -25,6 +26,7 @@ class Note {
     required this.creatorId,
     this.assignedToId,
     required this.imageUrls,
+    this.color = 0xFFFFFFFF, // Default white
   });
 
   factory Note.fromDocument(DocumentSnapshot doc) {
@@ -37,10 +39,13 @@ class Note {
       isFavorite: data['isFavorite'] ?? false,
       tags: List<String>.from(data['tags'] ?? []),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      dueDate: data['dueDate'] != null ? (data['dueDate'] as Timestamp).toDate() : null,
+      dueDate: data['dueDate'] != null
+          ? (data['dueDate'] as Timestamp).toDate()
+          : null,
       creatorId: data['creatorId'] ?? '',
       assignedToId: data['assignedToId'],
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      color: (data['color'] is int) ? data['color'] : 0xFFFFFFFF,
     );
   }
 
@@ -56,6 +61,7 @@ class Note {
       'creatorId': creatorId,
       'assignedToId': assignedToId,
       'imageUrls': imageUrls,
+      'color': color,
     };
   }
 
@@ -71,6 +77,7 @@ class Note {
     String? creatorId,
     String? assignedToId,
     List<String>? imageUrls,
+    int? color,
   }) {
     return Note(
       id: id ?? this.id,
@@ -84,6 +91,7 @@ class Note {
       creatorId: creatorId ?? this.creatorId,
       assignedToId: assignedToId ?? this.assignedToId,
       imageUrls: imageUrls ?? this.imageUrls,
+      color: color ?? this.color,
     );
   }
 }

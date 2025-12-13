@@ -14,7 +14,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -35,13 +35,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     try {
       await ref.read(authRepositoryProvider).createUserWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
       if (mounted) {
-         context.go('/'); // Navigate to home on success
+        context.go('/'); // Navigate to home on success
       }
     } catch (e) {
+      debugPrint('SIGNUP ERROR: $e'); // Debugging
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
@@ -59,7 +60,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign Up')), // Simple app bar for back nav
+      appBar:
+          AppBar(title: const Text('Sign Up')), // Simple app bar for back nav
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -79,12 +81,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
+                      color: Colors.red, // Force Red Background
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: const TextStyle(
+                          color: Colors.white), // Force White Text
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -97,8 +100,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your email';
-                    if (!value.contains('@')) return 'Please enter a valid email';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your email';
+                    if (!value.contains('@'))
+                      return 'Please enter a valid email';
                     return null;
                   },
                 ),
@@ -111,8 +116,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your password';
-                    if (value.length < 6) return 'Password must be at least 6 characters';
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your password';
+                    if (value.length < 6)
+                      return 'Password must be at least 6 characters';
                     return null;
                   },
                 ),
