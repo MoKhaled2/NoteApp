@@ -11,9 +11,15 @@ final notesRepositoryProvider = Provider<NotesRepository>((ref) {
 });
 
 final notesStreamProvider = StreamProvider<List<Note>>((ref) {
-  final authState =
-      ref.watch(authStateProvider); // Force rebuild on auth change
-  return ref.watch(notesRepositoryProvider).getNotesStream();
+  final user = ref.watch(authRepositoryProvider).currentUser;
+
+  if (user == null) return Stream.value([]);
+
+  return ref.watch(notesRepositoryProvider).getNotesStream().map((notes) {
+    final sorted = List<Note>.from(notes);
+    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  });
 });
 
 abstract class NotesRepository {
@@ -40,7 +46,8 @@ class FirestoreNotesRepository implements NotesRepository {
         .collection('users')
         .doc(user.uid)
         .collection('notes')
-        .add(note.toMap());
+        .doc(note.id)
+        .set(note.toMap());
   }
 
   @override
@@ -78,7 +85,6 @@ class FirestoreNotesRepository implements NotesRepository {
         .collection('users')
         .doc(user.uid)
         .collection('notes')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => Note.fromDocument(doc)).toList());

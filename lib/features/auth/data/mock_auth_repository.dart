@@ -26,7 +26,7 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> createUserWithEmailAndPassword(
-      String email, String password) async {
+      String email, String password, String name) async {
     await Future.delayed(const Duration(seconds: 1)); // Simulate network
     _currentUser = AppUser(uid: 'mock_user_123', email: email);
     _authStateController.add(_currentUser);

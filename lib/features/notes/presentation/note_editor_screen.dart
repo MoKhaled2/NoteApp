@@ -9,8 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../domain/note_model.dart';
 import '../data/notes_repository.dart';
+import '../../../../core/utils/delete_dialog.dart';
 import '../../auth/data/auth_repository.dart';
-import 'widgets/note_color_picker.dart'; // Import here
+import 'widgets/note_color_picker.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -80,7 +81,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       } else {
         await ref.read(notesRepositoryProvider).updateNote(note);
       }
-      if (mounted) context.pop();
+      if (mounted) {
+        context.pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Note saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -94,8 +103,53 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       context.pop();
       return;
     }
-    await ref.read(notesRepositoryProvider).deleteNote(widget.noteId!);
-    if (mounted) context.pop();
+
+    final repo = ref.read(notesRepositoryProvider);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Call custom dialog
+    final confirm = await showDeleteConfirmation(context);
+    if (!confirm) return;
+
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) return;
+
+    final noteToDelete = Note(
+      id: widget.noteId!,
+      title: _titleController.text.trim(),
+      content: _contentController.text.trim(),
+      isDone: widget.note?.isDone ?? false,
+      isFavorite: widget.note?.isFavorite ?? false,
+      tags: _tags,
+      createdAt: widget.note?.createdAt ?? DateTime.now(),
+      dueDate: _dueDate,
+      creatorId: user.uid,
+      assignedToId: widget.note?.assignedToId,
+      imageUrls: _imageUrls,
+      color: _selectedColor,
+    );
+
+    await repo.deleteNote(widget.noteId!);
+
+    if (mounted) {
+      context.pop();
+    }
+
+    scaffoldMessenger.clearSnackBars();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: const Text('Note deleted'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.white,
+          onPressed: () {
+            repo.addNote(noteToDelete);
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -162,117 +216,169 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDefaultColor = _selectedColor == 0xFFFFFFFF;
+    final bgColor =
+        isDefaultColor ? colorScheme.surface : Color(_selectedColor);
+
+    // Determine icon colors based on background
+    final iconColor = isDefaultColor ? colorScheme.onSurface : Colors.black87;
+    final textColor = isDefaultColor ? colorScheme.onSurface : Colors.black87;
+    final hintColor = isDefaultColor
+        ? colorScheme.onSurface.withOpacity(0.5)
+        : Colors.black38;
+
     return Scaffold(
-      backgroundColor: Color(_selectedColor), // Apply background color
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Transparent app bar
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: iconColor),
+          onPressed: () {
+            if (_titleController.text.isNotEmpty ||
+                _contentController.text.isNotEmpty) {
+              _saveNote();
+            } else {
+              context.pop();
+            }
+          },
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme:
-            const IconThemeData(color: Colors.black87), // Ensure icons visible
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined),
+            icon: Icon(Icons.ios_share_outlined, color: iconColor),
             onPressed: _shareNote,
+            tooltip: 'Share',
           ),
           IconButton(
-            icon: const Icon(Icons.palette_outlined), // Color picker button
-            onPressed: _showColorPicker,
+            icon: Icon(Icons.delete_outline_rounded, color: iconColor),
+            onPressed: _deleteNote,
+            tooltip: 'Delete',
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outlined),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete Note?'),
-                  content: const Text('This cannot be undone.'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel')),
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Delete')),
-                  ],
-                ),
-              );
-              if (confirm == true) _deleteNote();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.check),
+            icon: Icon(Icons.check_rounded, color: iconColor),
             onPressed: _saveNote,
+            tooltip: 'Save',
           ),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.transparent,
-        elevation: 0,
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.image_outlined, color: Colors.black87),
-              onPressed: () => _pickImage(ImageSource.gallery),
-              tooltip: 'Add Image',
-            ),
-            IconButton(
-              icon:
-                  const Icon(Icons.camera_alt_outlined, color: Colors.black87),
-              onPressed: () => _pickImage(ImageSource.camera),
-              tooltip: 'Take Photo',
-            ),
-            IconButton(
-              icon: const Icon(Icons.event_outlined, color: Colors.black87),
-              onPressed: _pickDate,
-              tooltip: 'Set Date',
-            ),
-            if (_dueDate != null)
-              Chip(
-                label: Text(DateFormat('MM/dd/yyyy').format(_dueDate!)),
-                onDeleted: () => setState(() => _dueDate = null),
-                backgroundColor: Colors.black12,
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: bgColor, // Match background
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(Icons.palette_outlined, color: iconColor),
+                onPressed: _showColorPicker,
+                tooltip: 'Color',
               ),
-          ],
+              IconButton(
+                icon: Icon(Icons.image_outlined, color: iconColor),
+                onPressed: () => _pickImage(ImageSource.gallery),
+                tooltip: 'Image',
+              ),
+              IconButton(
+                icon: Icon(Icons.camera_alt_outlined, color: iconColor),
+                onPressed: () => _pickImage(ImageSource.camera),
+                tooltip: 'Camera',
+              ),
+              IconButton(
+                icon: Icon(Icons.event_outlined, color: iconColor),
+                onPressed: _pickDate,
+                tooltip: 'Reminder',
+              ),
+            ],
+          ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_imageUrls.isNotEmpty)
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _imageUrls.length,
-                  itemBuilder: (context, index) {
-                    final path = _imageUrls[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: Stack(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_dueDate != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDefaultColor
+                              ? colorScheme.surfaceContainerHighest
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.event,
+                                size: 16, color: iconColor.withOpacity(0.7)),
+                            const SizedBox(width: 8),
+                            Text(
+                              DateFormat('MMMM d, yyyy').format(_dueDate!),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => setState(() => _dueDate = null),
+                              child: Icon(Icons.close,
+                                  size: 16, color: iconColor.withOpacity(0.7)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Image Gallery
+              if (_imageUrls.isNotEmpty)
+                SizedBox(
+                  height: 220,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _imageUrls.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final path = _imageUrls[index];
+                      return Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: kIsWeb
                                 ? Image.network(
                                     path,
-                                    height: 200,
-                                    width: 200,
+                                    height: 220,
+                                    width:
+                                        220, // Square aspect for cleaner look
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error,
-                                            stackTrace) =>
-                                        const Center(child: Icon(Icons.error)),
+                                    errorBuilder: (ctx, err, stack) =>
+                                        Container(
+                                            height: 220,
+                                            width: 220,
+                                            color: Colors.black12,
+                                            child: const Icon(Icons.error)),
                                   )
                                 : Image.file(
                                     File(path),
-                                    height: 200,
-                                    width: 200,
+                                    height: 220,
+                                    width: 220,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
-                                        height: 200,
-                                        width: 200,
+                                        height: 220,
+                                        width: 220,
                                         color: Colors.grey[300],
                                         child: const Icon(Icons.broken_image),
                                       );
@@ -280,59 +386,66 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                                   ),
                           ),
                           Positioned(
-                            right: 4,
-                            top: 4,
-                            child: InkWell(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
                               onTap: () =>
                                   setState(() => _imageUrls.removeAt(index)),
-                              child: const CircleAvatar(
-                                radius: 12,
-                                backgroundColor: Colors.black54,
-                                child: Icon(Icons.close,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close,
                                     size: 16, color: Colors.white),
                               ),
                             ),
                           ),
                         ],
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
+
+              if (_imageUrls.isNotEmpty) const SizedBox(height: 24),
+
+              TextField(
+                controller: _titleController,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  height: 1.2,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Title',
+                  hintStyle: TextStyle(color: hintColor),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                maxLines: null,
+                textCapitalization: TextCapitalization.sentences,
               ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _titleController,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87, // Force dark text
-                  ),
-              decoration: const InputDecoration(
-                hintText: 'Title',
-                hintStyle: TextStyle(color: Colors.black38),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+              const SizedBox(height: 16),
+              TextField(
+                controller: _contentController,
+                style: TextStyle(
+                  fontSize: 18,
+                  height: 1.6,
+                  color: textColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Type something...',
+                  hintStyle: TextStyle(color: hintColor),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                maxLines: null,
+                textCapitalization: TextCapitalization.sentences,
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _contentController,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.black87,
-                    height: 1.6,
-                  ),
-              maxLines: null,
-              decoration: const InputDecoration(
-                hintText: 'Start typing...',
-                hintStyle: TextStyle(color: Colors.black38),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

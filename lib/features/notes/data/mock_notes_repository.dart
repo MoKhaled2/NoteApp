@@ -64,7 +64,6 @@ class MockNotesRepository implements NotesRepository {
 
   @override
   Stream<List<Note>> getNotesStream() {
-    // Return current notes immediately
     return _notesController.stream.startWith(List.from(_notes));
   }
 

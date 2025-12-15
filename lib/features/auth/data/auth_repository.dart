@@ -20,7 +20,8 @@ abstract class AuthRepository {
   Stream<AppUser?> authStateChanges();
   AppUser? get currentUser;
   Future<void> signInWithEmailAndPassword(String email, String password);
-  Future<void> createUserWithEmailAndPassword(String email, String password);
+  Future<void> createUserWithEmailAndPassword(
+      String email, String password, String name);
   Future<void> signOut();
 }
 
@@ -32,7 +33,11 @@ class FirebaseAuthRepository implements AuthRepository {
 
   AppUser? _mapFirebaseUser(firebase_auth.User? user) {
     if (user == null) return null;
-    return AppUser(uid: user.uid, email: user.email ?? '');
+    return AppUser(
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName,
+    );
   }
 
   @override
@@ -53,11 +58,14 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> createUserWithEmailAndPassword(
-      String email, String password) async {
-    await _firebaseAuth.createUserWithEmailAndPassword(
+      String email, String password, String name) async {
+    final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
+    if (name.isNotEmpty && userCredential.user != null) {
+      await userCredential.user!.updateDisplayName(name);
+    }
   }
 
   @override
