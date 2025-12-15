@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,54 +39,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
-      // Navigation is handled by auth state listener in router or main app logic
-      // But for simple flow we might want to just pop or go home if listener doesn't catch it immediately
       if (mounted) {
-        context.go('/'); // Navigate to home on success
-      }
-    } on FirebaseAuthException catch (e) {
-      debugPrint('LOGIN ERROR: ${e.code} - ${e.message}');
-      String msg = 'حدث خطأ غير متوقع';
-
-      switch (e.code) {
-        case 'user-not-found':
-          msg =
-              'هذا الحساب غير مسجل. يرجى التأكد من البريد الإلكتروني أو إنشاء حساب جديد.';
-          break;
-        case 'wrong-password':
-          msg = 'كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.';
-          break;
-        case 'invalid-credential':
-          msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-          break;
-        case 'invalid-email':
-          msg = 'صيغة البريد الإلكتروني غير صحيحة.';
-          break;
-        case 'user-disabled':
-          msg = 'تم تعطيل هذا الحساب. يرجى الاتصال بالدعم.';
-          break;
-        case 'too-many-requests':
-          msg =
-              'محاولات كثيرة جداً. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.';
-          break;
-        case 'unknown-error':
-        case 'channel-error':
-          msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-          break;
-        default:
-          msg = e.message ?? 'حدث خطأ غير متوقع. يرجى التأكد من البيانات.';
-      }
-
-      if (mounted) {
-        setState(() {
-          _errorMessage = msg;
-        });
+        context.go('/');
       }
     } catch (e) {
       debugPrint('LOGIN ERROR: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.';
+          _errorMessage = e.toString();
         });
       }
     } finally {
@@ -185,18 +144,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: colorScheme.errorContainer,
+                              color: colorScheme.error,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
                                 Icon(Icons.error_outline,
-                                    color: colorScheme.error),
+                                    color: colorScheme.onError),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: TextStyle(color: colorScheme.error),
+                                    style:
+                                        TextStyle(color: colorScheme.onError),
                                   ),
                                 ),
                               ],

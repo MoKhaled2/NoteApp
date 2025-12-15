@@ -50,21 +50,47 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signInWithEmailAndPassword(String email, String password) async {
-    await _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
+        throw 'Invalid email or password.';
+      } else if (e.code == 'invalid-email') {
+        throw 'The email address is not valid.';
+      }
+      throw 'Login failed: ${e.message}';
+    } catch (e) {
+      throw 'An unexpected error occurred.';
+    }
   }
 
   @override
   Future<void> createUserWithEmailAndPassword(
       String email, String password, String name) async {
-    final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    if (name.isNotEmpty && userCredential.user != null) {
-      await userCredential.user!.updateDisplayName(name);
+    try {
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      if (name.isNotEmpty && userCredential.user != null) {
+        await userCredential.user!.updateDisplayName(name);
+      }
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw 'This email is already registered. Please login instead.';
+      } else if (e.code == 'weak-password') {
+        throw 'The password is too weak.';
+      } else if (e.code == 'invalid-email') {
+        throw 'The email address is not valid.';
+      }
+      throw 'Registration failed: ${e.message}';
+    } catch (e) {
+      throw 'An unexpected error occurred.';
     }
   }
 
