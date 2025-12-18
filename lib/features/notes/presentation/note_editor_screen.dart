@@ -138,6 +138,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     scaffoldMessenger.clearSnackBars();
     scaffoldMessenger.showSnackBar(
       SnackBar(
+        duration: const Duration(seconds: 3),
         content: const Text('Note deleted'),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,

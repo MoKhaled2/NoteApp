@@ -64,6 +64,141 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                 },
                 tooltip: 'Search',
               ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.sort),
+                tooltip: 'Sort by',
+                onSelected: (value) {
+                  final notifier = ref.read(sortOptionProvider.notifier);
+                  final descNotifier =
+                      ref.read(sortDescendingProvider.notifier);
+                  if (value == 'date_newest') {
+                    notifier.set('createdAt');
+                    descNotifier.set(true);
+                  } else if (value == 'date_oldest') {
+                    notifier.set('createdAt');
+                    descNotifier.set(false);
+                  } else if (value == 'title_az') {
+                    notifier.set('title');
+                    descNotifier.set(false);
+                  } else if (value == 'title_za') {
+                    notifier.set('title');
+                    descNotifier.set(true);
+                  }
+                },
+                itemBuilder: (context) {
+                  final currentSort = ref.read(sortOptionProvider);
+                  final isDescending = ref.read(sortDescendingProvider);
+
+                  return [
+                    PopupMenuItem(
+                      value: 'date_newest',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.arrow_downward,
+                            size: 20,
+                            color: currentSort == 'createdAt' && isDescending
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Date (Newest First)',
+                            style: TextStyle(
+                              color: currentSort == 'createdAt' && isDescending
+                                  ? Theme.of(context).primaryColor
+                                  : null,
+                              fontWeight:
+                                  currentSort == 'createdAt' && isDescending
+                                      ? FontWeight.bold
+                                      : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'date_oldest',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.arrow_upward,
+                            size: 20,
+                            color: currentSort == 'createdAt' && !isDescending
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Date (Oldest First)',
+                            style: TextStyle(
+                              color: currentSort == 'createdAt' && !isDescending
+                                  ? Theme.of(context).primaryColor
+                                  : null,
+                              fontWeight:
+                                  currentSort == 'createdAt' && !isDescending
+                                      ? FontWeight.bold
+                                      : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'title_az',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sort_by_alpha,
+                            color: currentSort == 'title' && !isDescending
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Title (A-Z)',
+                            style: TextStyle(
+                              color: currentSort == 'title' && !isDescending
+                                  ? Theme.of(context).primaryColor
+                                  : null,
+                              fontWeight:
+                                  currentSort == 'title' && !isDescending
+                                      ? FontWeight.bold
+                                      : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'title_za',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sort_by_alpha,
+                            color: currentSort == 'title' && isDescending
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Title (Z-A)',
+                            style: TextStyle(
+                              color: currentSort == 'title' && isDescending
+                                  ? Theme.of(context).primaryColor
+                                  : null,
+                              fontWeight: currentSort == 'title' && isDescending
+                                  ? FontWeight.bold
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+              ),
               IconButton(
                 icon: Icon(_showFavoritesOnly
                     ? Icons.favorite

@@ -7,6 +7,7 @@ import '../../features/notes/presentation/note_editor_screen.dart';
 import '../../features/notes/domain/note_model.dart';
 
 // Simple provider for the router
+// ده بيساعد في ال auth redirect
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login', // Start at login for now

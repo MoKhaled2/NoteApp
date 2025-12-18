@@ -127,26 +127,28 @@ class StaggeredNoteCard extends ConsumerWidget {
                             final confirm =
                                 await showDeleteConfirmation(context);
                             if (confirm) {
+                              if (!context.mounted) return;
+                              final messenger = ScaffoldMessenger.of(context);
                               await ref
                                   .read(notesRepositoryProvider)
                                   .deleteNote(note.id);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Note deleted'),
-                                    backgroundColor: Colors.red,
-                                    action: SnackBarAction(
-                                      label: 'Undo',
-                                      textColor: Colors.white,
-                                      onPressed: () {
-                                        ref
-                                            .read(notesRepositoryProvider)
-                                            .addNote(note);
-                                      },
-                                    ),
+
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  duration: const Duration(seconds: 3),
+                                  content: const Text('Note deleted'),
+                                  backgroundColor: Colors.red,
+                                  action: SnackBarAction(
+                                    label: 'Undo',
+                                    textColor: Colors.white,
+                                    onPressed: () {
+                                      ref
+                                          .read(notesRepositoryProvider)
+                                          .addNote(note);
+                                    },
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             }
                           }
                         },
