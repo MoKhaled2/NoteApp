@@ -149,6 +149,10 @@ class StaggeredNoteCard extends ConsumerWidget {
                                   ),
                                 ),
                               );
+                              // Force hide after 3 seconds (workaround for Desktop behavior with Actions)
+                              Future.delayed(const Duration(seconds: 3), () {
+                                messenger.hideCurrentSnackBar();
+                              });
                             }
                           }
                         },

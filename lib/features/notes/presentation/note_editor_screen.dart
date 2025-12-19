@@ -151,6 +151,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         ),
       ),
     );
+      Future.delayed(const Duration(seconds: 3), () {
+        scaffoldMessenger.hideCurrentSnackBar();
+      });
   }
 
   Future<void> _pickImage(ImageSource source) async {
